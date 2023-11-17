@@ -1,0 +1,20 @@
+<html>
+  <head>
+    <title>Jobs</title>
+  </head>
+  <body>
+    <h1>Jobs</h1>
+    <p>Run jobs locally</p>
+    <table>
+      <tr>
+        <th>Id</th>
+        <th>Command</th>
+      </tr>
+      {{range $job := .Jobs}}
+        <tr>
+          <td>{{$job.Id}}</td>
+          <td>{{$job.Command}}</td>
+        </tr>
+      {{end}}
+  </body>
+</html>
