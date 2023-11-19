@@ -11,8 +11,10 @@
       hx-post="/api/jobs"
       hx-target="#jobs"
       hx-swap="beforeend"
+      hx-on::after-request="this.reset()"
+      hx-validate=""
     >
-      <input name="job-command" type="text" placeholder="Command to run"/>
+      <input name="job-command" type="text" placeholder="Command to run" minlength="1"/>
       <input type="submit" value="Submit"/>
     </form>
     <table id="jobs">

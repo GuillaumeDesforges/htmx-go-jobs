@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 )
 
@@ -31,26 +29,35 @@ var account = Account{
 }
 
 func HandleIndex(w http.ResponseWriter, r *http.Request) {
-	requestLogJsonBytes, marshalError := json.Marshal(map[string]string{
-		"method": r.Method,
-		"path":   r.URL.Path,
-	})
-	if marshalError != nil {
-		log.Panicln(marshalError)
-	}
-	log.Println(string(requestLogJsonBytes))
 	tmpl := template.Must(template.ParseGlob("templates/*"))
 	tmpl.ExecuteTemplate(w, "index", account)
 }
 
 func HandleJobs(w http.ResponseWriter, r *http.Request) {
-	job := Job{
-		Id:      "id",
-		Command: "command",
-		Status:  "status",
+	if r.Method == http.MethodGet {
+		tmpl := template.Must(template.ParseGlob("templates/*"))
+		for _, job := range account.Jobs {
+			tmpl.ExecuteTemplate(w, "job-row", job)
+		}
+		return
 	}
-	tmpl := template.Must(template.ParseGlob("templates/*"))
-	tmpl.ExecuteTemplate(w, "job-row", job)
+	if r.Method == http.MethodPost {
+		// parse input
+		r.ParseForm()
+		newJobCommand := r.Form.Get("job-command")
+		// create new job
+		job := Job{
+			Id:      "id",
+			Command: newJobCommand,
+			Status:  "queued",
+		}
+		account.Jobs = append(account.Jobs, job)
+		// return row
+		tmpl := template.Must(template.ParseGlob("templates/*"))
+		tmpl.ExecuteTemplate(w, "job-row", job)
+		return
+	}
+	w.WriteHeader(http.StatusNotFound)
 }
 
 func main() {
