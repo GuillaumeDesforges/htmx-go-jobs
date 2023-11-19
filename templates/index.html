@@ -1,0 +1,29 @@
+{{define "index"}}
+<html>
+  <head>
+    <title>Jobs</title>
+    <script src="/static/htmx.min.js"></script>
+  </head>
+  <body>
+    <h1>Jobs</h1>
+    <p>Run jobs locally</p>
+    <form
+      hx-post="/api/jobs"
+      hx-target="#jobs"
+      hx-swap="beforeend"
+    >
+      <input name="job-command" type="text" placeholder="Command to run"/>
+      <input type="submit" value="Submit"/>
+    </form>
+    <table id="jobs">
+      <tr>
+        <th>Id</th>
+        <th>Command</th>
+        <th>Status</th>
+      </tr>
+      {{range $job := .Jobs}}
+        {{template "job-row" $job}}
+      {{end}}
+  </body>
+</html>
+{{end}}
