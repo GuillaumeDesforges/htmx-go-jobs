@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"html/template"
 	"net/http"
 )
@@ -19,14 +20,10 @@ type Account struct {
 }
 
 var account = Account{
-	Jobs: []Job{
-		{
-			Id:      "1",
-			Command: "echo 'Hello world'",
-			Status:  "success",
-		},
-	},
+	Jobs: []Job{},
 }
+
+var jobUpdateChannel = make(chan Job)
 
 func HandleIndex(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseGlob("templates/*"))
@@ -46,12 +43,14 @@ func HandleJobs(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		newJobCommand := r.Form.Get("job-command")
 		// create new job
+		jobId := uuid.Must(uuid.NewRandom())
 		job := Job{
-			Id:      "id",
+			Id:      jobId.String(),
 			Command: newJobCommand,
-			Status:  "queued",
+			Status:  "received",
 		}
 		account.Jobs = append(account.Jobs, job)
+		go runJob(job)
 		// return row
 		tmpl := template.Must(template.ParseGlob("templates/*"))
 		tmpl.ExecuteTemplate(w, "job-row", job)
@@ -60,16 +59,38 @@ func HandleJobs(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
+func updateJobs() {
+	// process incoming job updates
+	for job := range jobUpdateChannel {
+		fmt.Printf("Received %s\n", job)
+		// find job in account
+		for idx, accountJob := range account.Jobs {
+			if accountJob.Id == job.Id {
+				// update the job in the account
+				accountJob.Status = job.Status
+				account.Jobs[idx] = accountJob
+				break
+			}
+		}
+	}
+}
+
 func main() {
-	// static files
-	fs := http.FileServer(http.Dir("./static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	// Static files
+	fsStatic := http.FileServer(http.Dir("./static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fsStatic))
+	// Logs
+	fsLogs := http.FileServer(http.Dir("./logs"))
+	http.Handle("/logs/", http.StripPrefix("/logs/", fsLogs))
 	// API routes
 	http.HandleFunc("/api/jobs", HandleJobs)
 	// HTML routes
 	http.HandleFunc("/", HandleIndex)
 
-	// start server
+	// Update jobs in the database
+	go updateJobs()
+
+	// Start server
 	address := fmt.Sprintf(":%d", port)
 	http.ListenAndServe(address, nil)
 }
